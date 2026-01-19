@@ -28,9 +28,9 @@
                 </li>
                 <li>
                     <div class="grid grid-cols-2 gap-x-2">
-                        <a href="{{route('user.updatepage', ['email' => $user->email])}}" class="bg-orange-950 px-2 rounded border border-orange-950 text-white hover:text-black hover:bg-white transition text-center">Редактировать</a>
-                        @if(Auth::user()->email !== $user->email)
-                        <form action="{{route('user.delete', ['email' => $user->email])}}" method="post" class="grid">
+                        <a href="{{route('user.updatepage', $user)}}" class="bg-orange-950 px-2 rounded border border-orange-950 text-white hover:text-black hover:bg-white transition text-center">Редактировать</a>
+                        @if(Auth::user()->id !== $user->id)
+                        <form action="{{route('user.delete', $user)}}" method="post" class="grid">
                             @method('delete')
                             @csrf
                                 <button type="submit" class="bg-red-600 px-2 rounded text-white hover:text-black hover:bg-white transition cursor-pointer text-center">Удалить</button>                            

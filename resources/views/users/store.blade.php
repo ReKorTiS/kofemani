@@ -36,17 +36,19 @@
                 <span class="text-red-400">{{$message}}</span>
                 @enderror
             </div>
-            <div class="grid grid-cols-2 items-center gap-y-1">
+            <div class="grid grid-cols-2 items-center">
                 <label for="login" class="text-xl">Логин:</label>
                 <input type="text" id="login" name="login" class="bg-blue-100 rounded py-2 px-2">
                 @error('login')
                 <span class="text-red-400">{{$message}}</span>
                 @enderror
             </div>
-            <div class="grid grid-cols-2 items-center gap-y-1">
-                <label for="is_admin" class="text-xl">Администратор:</label>
-                <input type="hidden" name="is_admin" value="0">
-                <input type="checkbox" id="is_admin" name="is_admin" value="1" class="bg-blue-100 rounded py-2 px-2">
+            <div class="grid grid-cols-2 items-center">
+                <span class="text-xl">Тип аккаунта:</span>
+                <div class="">
+                    <label for="manager" class="flex gap-x-1"><input type="radio" id="manager" name="is_admin" value="0" checked>Менеджер</label>
+                    <label for="admin" class="flex gap-x-1"><input type="radio" id="admin" name="is_admin" value="1" class="bg-blue-100" >Администратор</label>       
+                </div>
             </div>
             <div class="grid grid-cols-2 items-center">
                 <label for="password" class="text-xl">Пароль:</label>

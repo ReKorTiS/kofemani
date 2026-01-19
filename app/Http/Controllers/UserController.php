@@ -10,36 +10,33 @@ class UserController extends Controller
         $users = User::all();
         return view('users.index', compact('users'));
     }
-    public function userUpdatePage(Request $request){
-        $thisuser = User::where('email', $request->email)->first();
-        return view('users.update', compact('thisuser'));
+    public function userUpdatePage(Request $request, User $user){
+        return view('users.update', compact('user'));
     }
     
-    // public function userUpdate(Request $request){
-    //     $credentials = $request->validate([
-    //         'firstname' => 'required',
-    //         'lastname' => 'required',
-    //         'patronymic' => 'required',
-    //         'is_admin' => 'required',
-    //         'login' => 'required|string',
-    //         'password' => 'nullable',
-    //     ]);           
-    //     $user = User::where('email', )->first();
-    //     if(!$credentials['password'] == 'null'){
-    //         $user->update([
-    //             'firstname' => $credentials['firstname'],
-    //             'lastname' => $credentials['lastname'],
-    //             'patronymic' => $credentials['patronymic'],
-    //             'is_admin' => $credentials['is_admin'],
-    //             'login' => $credentials['login'],
-    //         ]);
-    //         session()->flash('ok', 'Пользователь успешно сохранён!');
-    //         return to_route('users.index');
-    //     }
-    //       $user->update($credentials);
-    //     session()->flash('ok', 'Пользователь успешно сохранён!');
-    //     return to_route('users.index');
-    // }
+    public function userUpdate(Request $request, User $user){
+        $credentials = $request->validate([
+            'firstname' => 'required',
+            'lastname' => 'required',
+            'patronymic' => 'required',
+            'is_admin' => 'required',
+            'login' => 'required|string',
+            'password' => 'nullable',
+        ]);           
+        if(!$credentials['password'] == 'null'){
+            $user->update([
+                'firstname' => $credentials['firstname'],
+                'lastname' => $credentials['lastname'],
+                'patronymic' => $credentials['patronymic'],
+                'is_admin' => $credentials['is_admin'],
+                'login' => $credentials['login'],
+            ]);
+        }else{
+        $user->update($credentials);
+    }
+        session()->flash('ok', 'Пользователь успешно сохранён!');
+        return to_route('users.index');
+    }
     public function userStorePage(Request $request){
         return view('users.store');
     }
@@ -62,10 +59,11 @@ class UserController extends Controller
         return back();   
 
     }
-    public function userDelete(Request $request){
-    $user = User::where('email', $request->email);
-    $user->delete();
+    public function userDelete(User $user){    
+
     session()->flash('ok', 'Пользователь успешно удалён!');
+    $user->delete();
+
 
     return to_route('users.index'); 
     }

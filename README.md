@@ -1,59 +1,182 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<!-- Наши маршруты/web.php выглядят так: -->
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Route::get('/', 'ImportController@getImport')->name('import');
+Route::post('/import_parse', 'ImportController@parseImport')->name('import_parse');
+Route::post('/import_process', 'ImportController@processImport')->name('import_process');
+<!-- Итак, три действия: импорт формы, экранизация полей и обработка с успехом (или нет). -->
 
-## About Laravel
+<!-- Первый выглядит очень просто: -->
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+class ImportController extends Controller
+{
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+    public function getImport()
+    {
+        return view('import');
+    }
+<!-- Вот и всё, никаких данных для передачи в вид, больше никакой логики. Теперь. -->
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+<!-- Шаг дальше — давайте действительно разберём наш CSV. -->
+<!-- Я покажу вам метод шаг за шагом. -->
 
-## Learning Laravel
+public function parseImport(CsvImportRequest $request)
+{
+    $path = $request->file('csv_file')->getRealPath();
+    // To be continued...
+}
+<!-- <!-- Первая часть — фактически получить файл CSV, это короткая реплика в Laravel. Вместе с этим появляется файл запроса на валидацию, который тоже довольно прост — нам просто нужно убедиться, что CSV загружен: --> -->
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+class CsvImportRequest extends FormRequest
+{
+    public function authorize()
+    {
+        return true;
+    }
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+    public function rules()
+    {
+        return [
+            'csv_file' => 'required|file'
+        ];
+    }
+}
+<!-- Далее — как анализировать данные. У нас будет два сценария — с заголовком или без него.
 
-## Laravel Sponsors
+Парсинг CSV без заголовочной строки
+Давайте сначала разберёмся без заголовка. Представьте, что у нас есть этот CSV: -->
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
 
-### Premium Partners
+<!-- 
+Тогда разбор CSV в массив — это тоже короткая фраза. -->
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+public function parseImport(CsvImportRequest $request)
+{
+    $path = $request->file('csv_file')->getRealPath();
+    $data = array_map('str_getcsv', file($path));
+    // To be continued...
+}
+<!-- Таким образом, у нас будет $data массив строк, где каждая строка будет содержать массив столбцов. Теперь мы можем представить is в виде таблицы и дать пользователю выбор полей. -->
 
-## Contributing
+public function parseImport(CsvImportRequest $request)
+{
+    $path = $request->file('csv_file')->getRealPath();
+    $data = array_map('str_getcsv', file($path));
+    $csv_data = array_slice($data, 0, 2);
+    return view('import_fields', compact('csv_data'));
+}
+<!-- Я делаю срез только первых двух строк, потому что их достаточно для отображения, чтобы пользователь понимал, какое значение в каком столбце. Не нужно показывать весь CSV. -->
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+<!-- А теперь вот как выглядит наш import_fields.blade.php: -->
 
-## Code of Conduct
+<form class="form-horizontal" method="POST" action="{{ route('import_process') }}">
+    {{ csrf_field() }}
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+    <table class="table">
+        @foreach ($csv_data as $row)
+            <tr>
+            @foreach ($row as $key => $value)
+                <td>{{ $value }}</td>
+            @endforeach
+            </tr>
+        @endforeach
+        <tr>
+            @foreach ($csv_data[0] as $key => $value)
+                <td>
+                    <select name="fields[{{ $key }}]">
+                        @foreach (config('app.db_fields') as $db_field)
+                            <option value="{{ $loop->index }}">{{ $db_field }}</option>
+                        @endforeach
+                    </select>
+                </td>
+            @endforeach
+        </tr>
+    </table>
 
-## Security Vulnerabilities
+    <button type="submit" class="btn btn-primary">
+        Import Data
+    </button>
+</form>
+<!-- А вот у нас есть что-то вроде этого — тот же скриншот, что и выше:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
-## License
+<!-- 
+Несколько комментариев здесь. Как видно, у нас есть другая форма, которая показывает таблицу первых двух строк CSV, а затем одну строку с выпадающим списком для каждого столбца.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Для простоты мы сохраняем опции для столбцов в виде массивов в config/app.php: --> -->
+
+'db_fields' => [
+    'first_name',
+    'last_name',
+    'email'
+]
+<!-- Поэтому мы вызываем их как config('app.db_fields') и проходим через них.
+
+Также мы используем структуру $loop->индекса для установки значения поля. Подробнее о The Loop Variable можно прочитать здесь.
+
+Временное сохранение данных
+Теперь, чтобы затем обработать данные, нам нужно где-то их хранить — помните, в таблице мы показываем только две первые строки.
+
+Есть разные способы сделать это, я выбрал отдельную таблицу базы данных для CSV-файлов: -->
+
+Schema::create('csv_data', function (Blueprint $table) {
+    $table->increments('id');
+    $table->string('csv_filename');
+    $table->boolean('csv_header')->default(0);
+    $table->longText('csv_data');
+    $table->timestamps();
+});
+<!-- И простая модель-приложение/CsvData.php: -->
+
+class CsvData extends Model
+{
+    protected $table = 'csv_data';
+    protected $fillable = ['csv_filename', 'csv_header', 'csv_data'];
+}
+<!-- Если мы вернёмся к контроллеру, нам нужно хранить полные данные в этой таблице — вот как это будет выглядеть сейчас: -->
+
+public function parseImport(CsvImportRequest $request)
+{
+    $path = $request->file('csv_file')->getRealPath();
+    $data = array_map('str_getcsv', file($path));
+
+    $csv_data_file = CsvData::create([
+        'csv_filename' => $request->file('csv_file')->getClientOriginalName(),
+        'csv_header' => $request->has('header'),
+        'csv_data' => json_encode($data)
+    ]);
+
+    $csv_data = array_slice($data, 0, 2);
+    return view('import_fields', compact('csv_data', 'csv_data_file'));
+}
+<!-- Мы сохраняем данные файла в базе данных с помощью json_encode(), и передаём результат в представление. Затем, в нашей форме import_fields.blade.php, мы показываем, какой файл хотим обработать, указывая его ID как скрытое поле. -->
+
+<form class="form-horizontal" method="POST" action="{{ route('import_process') }}">
+    {{ csrf_field() }}
+    <input type="hidden" name="csv_data_file_id" value="{{ $csv_data_file->id }}" />
+<!-- Теперь пришло время действительно обработать данные.
+
+Хранение данных в базе данных
+На самом деле, эта часть тоже довольно проста — нужно просто сопоставить значения выпадающего списка с реальными значениями столбцов. Вот как это выглядит: -->
+
+public function processImport(Request $request)
+{
+    $data = CsvData::find($request->csv_data_file_id);
+    $csv_data = json_decode($data->csv_data, true);
+    foreach ($csv_data as $row) {
+        $contact = new Contact();
+        foreach (config('app.db_fields') as $index => $field) {
+            $contact->$field = $row[$request->fields[$index]];
+        }
+        $contact->save();
+    }
+
+    return view('import_success');
+}
+<!-- Мы получаем данные из базы данных, делаем json_decode() (второй параметр true даёт результат массива), а затем просматриваем их по циклу.
+
+Самая сложная часть, пожалуй, — вот эта фраза: -->
+
+$contact->$field = $row[$request->fields[$index]];
+<!-- Здесь мы присваиваем значение свойству согласно выпадающему списку из таблицы полей.
+
+Вот и всё — посмотрите на успех! -->
